@@ -58,7 +58,8 @@ def pos_embed(x, temperature=10000, scale=2 * math.pi, normalize=True):
     assert num_pos_feats * 2 == channel, (
         'The input channel number must be an even number.')
     dim_t = torch.arange(num_pos_feats, dtype=torch.float32, device=x.device)
-    dim_t = temperature ** (2 * (dim_t // 2) / num_pos_feats)
+    # dim_t = temperature ** (2 * (dim_t // 2) / num_pos_feats)
+    dim_t = temperature ** (2 * torch.div(dim_t, 2, rounding_mode='trunc') / num_pos_feats)
 
     pos_x = x_embed[:, :, :, None] / dim_t
     pos_y = y_embed[:, :, :, None] / dim_t
@@ -164,12 +165,13 @@ def mask_rcnn_loss(pred_mask_logits: torch.Tensor, pred_mask_logits_uncertain: t
     Returns:
         mask_loss (Tensor): A scalar tensor containing the loss.
     """
+    # print(pred_mask_logits.shape, pred_mask_logits_uncertain.shape, pred_boundary_logits.shape)
+    # print(x_hr.shape, x_hr_l.shape, x_hr_ll.shape, x_c.shape, x_p2_s.shape,  len(instances))
     cls_agnostic_mask = pred_mask_logits.size(1) == 1
     total_num_masks = pred_mask_logits.size(0)
     mask_side_len = pred_mask_logits.size(2)
     assert pred_mask_logits.size(2) == pred_mask_logits.size(
         3), "Mask prediction must be square!"
-   
     gt_classes = []
     gt_masks = []
     gt_masks_s = []
@@ -183,6 +185,7 @@ def mask_rcnn_loss(pred_mask_logits: torch.Tensor, pred_mask_logits_uncertain: t
         # if index >= 1:
         #     continue
         if len(instances_per_image) == 0:
+            # gt_semantic_mask_s.append(torch.zeros((1, 1, x_p2_s[index:index+1].shape[-2], x_p2_s[index:index+1].shape[-1])).to(pred_mask_logits))
             continue
         if not cls_agnostic_mask:
             gt_classes_per_image = instances_per_image.gt_classes.to(
